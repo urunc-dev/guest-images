@@ -1,0 +1,25 @@
+#syntax=harbor.nbfc.io/nubificus/bunny:amd64-d672952@sha256:1baed1b1ea9da434de034cae070eb40be89fe7b52992bd67a86d640281a67951
+# bunny main d672952 (unreleased, after v0.0.5): reads this file from its own directory and supports workdir.
+version: v0.1
+
+platforms:
+  framework: linux
+  monitor: firecracker
+  architecture: x86
+
+rootfs:
+  # An ext4 filesystem with nginx 1.31.8 (Alpine) and urunit 86913f1, built
+  # by prebuild.sh.
+  from: local
+  path: rootfs.ext4
+  type: block
+
+kernel:
+  # The linux/amd64 entry of linux-kernel:generic (Linux 6.18.57).
+  from: ghcr.io/urunc-dev/guest-images/linux-kernel@sha256:21a9fa9da48c7d8ebeb8194b779e807ed99cd2220f08eda8b450bf23f97e9385
+  path: /.boot/kernel
+
+# The image's log files link to /dev/stdout and /dev/stderr, which the
+# guest's /dev lacks, so send the error log to stderr directly.
+entrypoint: ["/urunit"]
+cmd: ["/usr/sbin/nginx", "-g", "daemon off;error_log stderr debug;"]

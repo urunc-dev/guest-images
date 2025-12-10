@@ -65,8 +65,9 @@ jobs:
     #   image directory (bunnyfiles, prebuild.sh) or anywhere under
     #   <app>/src. The other images are not rebuilt and their published
     #   images stay as they are. If BASE cannot be resolved (e.g. the
-    #   all-zero "before" of a new branch) or the build workflows themselves
-    #   changed, every image is built.
+    #   all-zero "before" of a new branch), or the build workflows or the
+    #   scripts under scripts/ that prebuild.sh hooks share changed, every
+    #   image is built.
     - name: Discover images
       id: scan
       env:
@@ -88,7 +89,7 @@ jobs:
             # --no-renames lists both sides of a rename, so moving a file out
             # of a directory still rebuilds what it used to belong to.
             CHANGED=$(git diff --name-only --no-renames "${BASE}...HEAD")
-            if ! grep -qE '^\.github/workflows/build(_and_manifest)?\.yml$' <<< "$CHANGED"; then
+            if ! grep -qE '^(\.github/workflows/build(_and_manifest)?\.yml|scripts/.*)$' <<< "$CHANGED"; then
               CHANGED_FILES=$(jq -R -s -c 'split("\n") | map(select(length > 0))' <<< "$CHANGED")
             fi
           else

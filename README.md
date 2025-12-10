@@ -49,7 +49,11 @@ CI builds each architecture of an image on a native runner, in this order:
    writes into the build context is available to the bunnyfile; gitignore
    it. For example, `chttp/unikraft/qemu/initrd/prebuild.sh` compiles
    `chttp/src/chttp.c` into the binary that chttp's bunnyfile puts in its
-   rootfs.
+   rootfs. Scripts that several images' `prebuild.sh` share live in
+   `scripts/`. For example, bunny cannot build a block rootfs from an image
+   yet, so the `prebuild.sh` of a block image calls `scripts/ext4-rootfs.sh`
+   with the image and a size, and the bunnyfile takes the resulting
+   `rootfs.ext4` (`rootfs: from: local, path: rootfs.ext4, type: block`).
 3. **Build `bunnyfile-<arch>`** with bunny, from the build context. Outside
    pull requests, the result is pushed as `<arch>-<commit sha>`.
 
@@ -61,9 +65,9 @@ into the multi-arch image, tags it with the commit SHA (and `latest` on
 
 On a pull request or a push to `main`, CI builds only the images whose inputs
 changed: a file directly in the image directory, or anywhere under
-`<app>/src`. A change to `.github/workflows/build.yml` or
-`.github/workflows/build_and_manifest.yml` rebuilds every image. Pull requests
-build without publishing.
+`<app>/src`. A change to `.github/workflows/build.yml`,
+`.github/workflows/build_and_manifest.yml` or a script under `scripts/`
+rebuilds every image. Pull requests build without publishing.
 
 `build.yml` can also be run by hand, with `mode` (`all`, or `changed` to
 build only what changed against `base`) and `filter` (only build image
