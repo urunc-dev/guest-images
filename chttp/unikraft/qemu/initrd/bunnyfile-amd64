@@ -1,0 +1,25 @@
+#syntax=harbor.nbfc.io/nubificus/bunny:amd64-d672952@sha256:1baed1b1ea9da434de034cae070eb40be89fe7b52992bd67a86d640281a67951
+# bunny main d672952 (unreleased, after v0.0.5): reads this file from its own directory and supports workdir.
+version: v0.1
+
+platforms:
+  framework: unikraft
+  version: 0.21.0
+  monitor: qemu
+  architecture: x86
+
+rootfs:
+  from: scratch
+  include:
+    - chttp:/chttp
+
+kernel:
+  # The qemu/x86_64 entry of unikraft.org/base (org.unikraft.kernel.version
+  # 0.21.0~476b59c), copied to harbor: unikraft.org only publishes `latest`,
+  # rebuilds it every night and deletes the old digests. Pinning the entry
+  # rather than the index also avoids the os.features platform matching that
+  # buildkit v0.31+ fails on.
+  from: harbor.nbfc.io/nubificus/unikraft-base:0.21.0-476b59c@sha256:cdbe075cf813c1a3fc0beda95483227a5bad229fd55998b0fec18d53c63a41af
+  path: /unikraft/bin/kernel
+
+cmdline: /chttp
