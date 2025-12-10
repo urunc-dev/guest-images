@@ -1,8 +1,11 @@
 name: Build and manifest
 
-# Builds <app>/<framework>/<monitor>/bunnyfile-<arch> for each requested arch
-# on a native runner, then combines them into a signed multi-arch manifest.
-# If the context directory has a prebuild.sh, it runs before the image build.
+# Builds <app>/<framework>/<monitor>/<rootfs>/bunnyfile-<arch> for each
+# requested arch on a native runner, then combines them into the signed
+# multi-arch manifest <app>-<framework>-<monitor>-<rootfs>.
+# The build context is <app>/src, or the image directory if the app has no
+# src. If the image directory has a prebuild.sh, it runs from the build
+# context before the image build.
 # Images are reproducible: all inputs must be pinned by digest and timestamps
 # are clamped to the epoch.
 
@@ -16,6 +19,10 @@ on:
         required: true
         type: string
       monitor:
+        required: true
+        type: string
+      rootfs:
+        description: "Rootfs type directory: raw, block, initrd or no_rootfs"
         required: true
         type: string
       arches:
@@ -34,8 +41,8 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  REGISTRY_IMAGE: ghcr.io/${{ github.repository }}/${{ inputs.app }}-${{ inputs.framework }}-${{ inputs.monitor }}
-  CONTEXT: ${{ inputs.app }}/${{ inputs.framework }}/${{ inputs.monitor }}
+  REGISTRY_IMAGE: ghcr.io/${{ github.repository }}/${{ inputs.app }}-${{ inputs.framework }}-${{ inputs.monitor }}-${{ inputs.rootfs }}
+  IMAGE_DIR: ${{ inputs.app }}/${{ inputs.framework }}/${{ inputs.monitor }}/${{ inputs.rootfs }}
 
 jobs:
   build:
@@ -49,13 +56,25 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Resolve build context
+      env:
+        APP: ${{ inputs.app }}
+      run: |
+        if [ -d "$APP/src" ]; then
+          echo "CONTEXT=$APP/src" >> "$GITHUB_ENV"
+        else
+          echo "CONTEXT=$IMAGE_DIR" >> "$GITHUB_ENV"
+        fi
+
+    # Runs from the build context, so what it produces there can be picked
+    # up by the bunnyfile.
     - name: Run prebuild hook
       working-directory: ${{ env.CONTEXT }}
       env:
         ARCH: ${{ matrix.arch }}
       run: |
-        if [ -f prebuild.sh ]; then
-          bash prebuild.sh
+        if [ -f "$GITHUB_WORKSPACE/$IMAGE_DIR/prebuild.sh" ]; then
+          bash "$GITHUB_WORKSPACE/$IMAGE_DIR/prebuild.sh"
         else
           echo "No prebuild.sh, skipping"
         fi
@@ -87,7 +106,7 @@ jobs:
       uses: docker/build-push-action@v6
       with:
         context: ./${{ env.CONTEXT }}
-        file: ./${{ env.CONTEXT }}/bunnyfile-${{ matrix.arch }}
+        file: ./${{ env.IMAGE_DIR }}/bunnyfile-${{ matrix.arch }}
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         platforms: linux/${{ matrix.arch }}

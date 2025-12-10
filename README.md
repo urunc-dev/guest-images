@@ -1,5 +1,103 @@
 # unikernel-build
 
+## Images
+
+Each image is described by bunnyfiles, the build files of the
+[bunny](https://github.com/nubificus/bunny) BuildKit frontend, laid out as:
+
+```
+<app>/
+├── src/                          sources and scripts shared by the app's images (optional)
+└── <framework>/<monitor>/<rootfs>/
+    ├── bunnyfile-<arch>          one per architecture
+    └── prebuild.sh               optional
+```
+
+| Level | Values |
+| --- | --- |
+| `<framework>` | The unikernel framework or guest OS, as in the bunnyfile's `platforms.framework`: `linux`, `unikraft`, ... |
+| `<monitor>` | The monitor, by its urunc name: `qemu`, `firecracker`, `cloud-hypervisor`, `hvt`, `spt`, ... |
+| `<rootfs>` | The rootfs type: `raw`, `block`, `initrd`, or `no_rootfs` for unikernels without one |
+| `<arch>` | `amd64` or `arm64` |
+
+Each `<app>/<framework>/<monitor>/<rootfs>` directory is one image, published
+as a multi-arch image signed with cosign. The image has an entry for every
+`bunnyfile-<arch>` in the directory:
+
+```
+<app>/<framework>/<monitor>/<rootfs>/bunnyfile-<arch>  ->  ghcr.io/urunc-dev/guest-images/<app>-<framework>-<monitor>-<rootfs>
+```
+
+For example, `chttp/unikraft/qemu/initrd/bunnyfile-amd64` is the amd64 entry
+of `chttp-unikraft-qemu-initrd`.
+
+Images of the same app on the same monitor differ only in how their rootfs is
+built. That is bunny's job, so their directories differ only in their
+bunnyfiles and `prebuild.sh`.
+
+### How an image is built
+
+CI builds each architecture of an image on a native runner, in this order:
+
+1. **Pick the build context:** `<app>/src`, or the image directory if the app
+   has no `src`. Paths in the bunnyfile are relative to it, so an app's
+   sources live in one place for all its images.
+2. **Run `prebuild.sh`**, if the image directory has one. It runs from the
+   build context, with `ARCH` set to `amd64` or `arm64`, before bunny starts.
+   It can create any file the build needs: files to put in the rootfs, a
+   whole prebuilt rootfs, or any other input the bunnyfile refers to. What it
+   writes into the build context is available to the bunnyfile; gitignore
+   it. For example, `chttp/unikraft/qemu/initrd/prebuild.sh` compiles
+   `chttp/src/chttp.c` into the binary that chttp's bunnyfile puts in its
+   rootfs.
+3. **Build `bunnyfile-<arch>`** with bunny, from the build context. Outside
+   pull requests, the result is pushed as `<arch>-<commit sha>`.
+
+Outside pull requests, once every architecture is built, CI combines them
+into the multi-arch image, tags it with the commit SHA (and `latest` on
+`main`) and signs it with cosign.
+
+### What CI builds
+
+On a pull request or a push to `main`, CI builds only the images whose inputs
+changed: a file directly in the image directory, or anywhere under
+`<app>/src`. A change to `.github/workflows/build.yml` or
+`.github/workflows/build_and_manifest.yml` rebuilds every image. Pull requests
+build without publishing.
+
+`build.yml` can also be run by hand, with `mode` (`all`, or `changed` to
+build only what changed against `base`) and `filter` (only build image
+directories under this path).
+
+Each architecture is built on a native runner. Builds are designed to be
+reproducible: every input is pinned by digest, the BuildKit version is pinned
+and image timestamps are clamped, so the same inputs should produce the same
+image digest.
+
+### Published images
+
+| Tag | Points to |
+| --- | --- |
+| `latest` | The latest build from `main` |
+| `<commit sha>` | The multi-arch image built from that commit |
+| `<arch>-<commit sha>` | The image for one architecture built from that commit |
+
+### Building an image locally
+
+Build on a host of the target architecture, with the BuildKit version CI
+uses:
+
+```sh
+docker buildx create --use --driver docker-container --driver-opt image=moby/buildkit:v0.34.0
+DIR=chttp/unikraft/qemu/initrd ARCH=amd64    # the image directory
+CTX=${DIR%%/*}/src; [ -d "$CTX" ] || CTX=$DIR
+[ -f "$DIR/prebuild.sh" ] && (cd "$CTX" && ARCH=$ARCH bash "$OLDPWD/$DIR/prebuild.sh")
+docker buildx build --platform linux/$ARCH -f "$DIR/bunnyfile-$ARCH" \
+  --build-arg SOURCE_DATE_EPOCH=0 \
+  --output "type=docker,name=${DIR//\//-}:dev,rewrite-timestamp=true" "$CTX"
+docker run --rm --runtime io.containerd.urunc.v2 "${DIR//\//-}:dev"
+```
+
 ## Linux kernels
 
 The guest kernels used by the Linux images are built from defconfigs in
