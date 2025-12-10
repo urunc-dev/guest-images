@@ -129,35 +129,3 @@ jobs:
       hypervisor: ${{ matrix.hypervisor }}
       postfix: ${{ matrix.postfix }}
     secrets: inherit
-
-  build-linux-unikernels:
-    strategy:
-      matrix:
-        unikernel: [ nginx, redis ]
-        hypervisor: [ qemu, fc ]
-        postfix: [ -linux ]
-        archconfig: [ amd64, arm64 ]
-      fail-fast: false
-    uses: ./.github/workflows/build-linux-unikernel.yml
-    with:
-      kernel_version: "6.14"
-      unikernel: ${{ matrix.unikernel }}
-      hypervisor: ${{ matrix.hypervisor }}
-      defconfig_file: "configs/defconfig.json"
-      postfix: ${{ matrix.postfix }}
-      arch: ${{ matrix.archconfig }}
-    secrets: inherit
-
-  manifest-linux-unikernels:
-    needs: [build-linux-unikernels]
-    uses: ./.github/workflows/manifest.yml
-    strategy:
-      matrix:
-        unikernel: [ nginx, redis ]
-        hypervisor: [ qemu, fc ]
-        postfix: [ -linux ]
-    with:
-      unikernel: ${{ matrix.unikernel }}
-      hypervisor: ${{ matrix.hypervisor }}
-      postfix: ${{ matrix.postfix }}
-    secrets: inherit
