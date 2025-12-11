@@ -1,0 +1,23 @@
+#syntax=harbor.nbfc.io/nubificus/bunny:arm64-d672952@sha256:4f15813bdc3ac99b3136f1ae4f411473dd64c7dca3a0b8de2b095c08b31808d5
+# bunny main d672952 (unreleased, after v0.0.5): reads this file from its own directory and supports workdir.
+version: v0.1
+
+platforms:
+  framework: linux
+  monitor: qemu
+  architecture: arm64
+
+rootfs:
+  # An ext4 filesystem with redis 8.8.4 (Alpine) and urunit 86913f1, built
+  # by prebuild.sh.
+  from: local
+  path: rootfs.ext4
+  type: block
+
+kernel:
+  # The linux/arm64 entry of linux-kernel:generic-compressed (Linux 6.18.57).
+  from: ghcr.io/urunc-dev/guest-images/linux-kernel@sha256:f3acc980fb1deb289a2f9e07332a015b96da91eb68a92346bd44472d8176d726
+  path: /.boot/kernel
+
+entrypoint: ["/urunit"]
+cmd: ["/usr/local/bin/redis-server"]
