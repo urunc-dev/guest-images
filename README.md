@@ -54,6 +54,9 @@ CI builds each architecture of an image on a native runner, in this order:
    yet, so the `prebuild.sh` of a block image calls `scripts/ext4-rootfs.sh`
    with the image and a size, and the bunnyfile takes the resulting
    `rootfs.ext4` (`rootfs: from: local, path: rootfs.ext4, type: block`).
+   `scripts/cpio-rootfs.sh` does the same for an initrd, from a directory
+   (`path: rootfs.cpio, type: initrd`), and `scripts/cc-static.sh` compiles
+   the small C programs that some test images run into static binaries.
 3. **Build `bunnyfile-<arch>`** with bunny, from the build context. Outside
    pull requests, the result is pushed as `<arch>-<commit sha>`.
 
