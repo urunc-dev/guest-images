@@ -1,0 +1,26 @@
+#syntax=harbor.nbfc.io/nubificus/bunny:arm64-d672952@sha256:4f15813bdc3ac99b3136f1ae4f411473dd64c7dca3a0b8de2b095c08b31808d5
+# bunny main d672952 (unreleased, after v0.0.5): reads this file from its own directory and supports workdir.
+version: v0.1
+
+platforms:
+  framework: linux
+  monitor: qemu
+  architecture: arm64
+
+rootfs:
+  # The linux/arm64 entry of busybox:1.38.0.
+  from: docker.io/library/busybox:1.38.0@sha256:365a051f12e05767b598e643676f14a450fb678a75ccf2beb0052c95d5c73b83
+  type: raw
+  include:
+    # The linux/arm64 entry of urunit 86913f1.
+    - from: harbor.nbfc.io/nubificus/urunit:arm64-86913f1@sha256:8c08675051b53cee325dee1007a464988097cb17d004bdad1f03b388254c41e2
+      source: /urunit
+      destination: /urunit
+
+kernel:
+  # The linux/arm64 entry of linux-kernel:generic-compressed (Linux 6.18.57).
+  from: ghcr.io/urunc-dev/guest-images/linux-kernel@sha256:f3acc980fb1deb289a2f9e07332a015b96da91eb68a92346bd44472d8176d726
+  path: /.boot/kernel
+
+entrypoint: ["/urunit"]
+cmd: ["/bin/sh"]
