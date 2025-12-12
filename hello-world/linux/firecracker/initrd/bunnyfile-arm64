@@ -1,0 +1,23 @@
+#syntax=harbor.nbfc.io/nubificus/bunny:arm64-d672952@sha256:4f15813bdc3ac99b3136f1ae4f411473dd64c7dca3a0b8de2b095c08b31808d5
+# bunny main d672952 (unreleased, after v0.0.5): reads this file from its own directory and supports workdir.
+version: v0.1
+
+platforms:
+  framework: linux
+  monitor: firecracker
+  architecture: arm64
+
+rootfs:
+  # An initrd with clis and urunit 86913f1, built by prebuild.sh.
+  from: local
+  path: rootfs.cpio
+  type: initrd
+
+kernel:
+  # The linux/arm64 entry of linux-kernel:generic (Linux 6.18.57).
+  from: ghcr.io/urunc-dev/guest-images/linux-kernel@sha256:6bc2f1e2672c3b884eee28599bfc9eaf20c94d709784816d3ab8590e0647f928
+  path: /.boot/kernel
+
+# urunc's tests replace the whole command, so urunit is part of it rather
+# than the entrypoint.
+cmd: ["/urunit", "/clis", "Hello", "world"]
