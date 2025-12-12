@@ -1,0 +1,25 @@
+#syntax=harbor.nbfc.io/nubificus/bunny:amd64-d672952@sha256:1baed1b1ea9da434de034cae070eb40be89fe7b52992bd67a86d640281a67951
+# bunny main d672952 (unreleased, after v0.0.5): reads this file from its own directory and supports workdir.
+version: v0.1
+
+platforms:
+  framework: linux
+  monitor: firecracker
+  architecture: x86
+
+rootfs:
+  # An initrd with app, /test_dir and urunit 86913f1, built by prebuild.sh.
+  from: local
+  path: rootfs.cpio
+  type: initrd
+
+kernel:
+  # The linux/amd64 entry of linux-kernel:generic (Linux 6.18.57).
+  from: ghcr.io/urunc-dev/guest-images/linux-kernel@sha256:21a9fa9da48c7d8ebeb8194b779e807ed99cd2220f08eda8b450bf23f97e9385
+  path: /.boot/kernel
+
+# PATH comes from the kernel image, which is the base of this image.
+envs: ["URUNC=urunc"]
+workdir: /test_dir
+entrypoint: ["/urunit"]
+cmd: ["/app"]
