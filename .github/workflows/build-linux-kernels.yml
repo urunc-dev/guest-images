@@ -169,8 +169,11 @@ jobs:
       uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
     # Releases are signed over the uncompressed tarball: x.y by Linus Torvalds,
-    # stable x.y.z by Greg Kroah-Hartman. Their keys are fetched over WKD, but
-    # only a signature by one of the pinned primary keys below is accepted.
+    # stable x.y.z by Greg Kroah-Hartman. Their public keys are kept in
+    # linux_kernel/keys/ rather than fetched over WKD, whose server is not
+    # always reachable from the runners. Only a signature by one of the
+    # pinned primary keys below is accepted, so the files themselves are not
+    # trusted.
     - name: Fetch and verify kernel source
       env:
         KVER: ${{ matrix.kver }}
@@ -182,7 +185,7 @@ jobs:
 
         GNUPGHOME=$(mktemp -d)
         export GNUPGHOME
-        gpg --batch --auto-key-locate clear,wkd --locate-keys torvalds@kernel.org gregkh@kernel.org
+        gpg --batch --import linux_kernel/keys/torvalds.asc linux_kernel/keys/gregkh.asc
         # gpg explains a failure (bad signature, missing key) on stderr, and
         # the || true lets it reach the error below instead of exiting here.
         SIGNER=$(xz -dc "linux-${KVER}.tar.xz" \
