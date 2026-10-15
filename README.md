@@ -55,7 +55,9 @@ regenerating a defconfig.
 ### What CI checks
 
 - The kernel.org tarball must carry a valid signature from Linus Torvalds or
-  Greg Kroah-Hartman.
+  Greg Kroah-Hartman. Their public keys are kept in `linux_kernel/keys/`, and
+  the workflow only accepts a signature from the two key fingerprints it
+  pins.
 - Every symbol the defconfig sets to `=y` must still be `=y` after the
   defconfig is expanded. A symbol whose dependencies are missing fails the
   build, rather than shipping a kernel that cannot mount its root.
